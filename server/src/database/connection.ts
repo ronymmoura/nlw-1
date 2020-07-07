@@ -1,12 +1,19 @@
-import knex from 'knex';
-import path from 'path';
+import { createConnection, getConnection } from 'typeorm';
 
-const connection = knex({
-  client: 'sqlite3',
-  connection: {
-    filename: path.resolve(__dirname, 'database.sqlite')
+const connection = {
+  async create () {
+    await createConnection({
+      type: 'sqlite',
+      database: ':memory:',
+      entities: ['src/entities/**/*.ts'],
+      dropSchema: true,
+      synchronize: true,
+      logging: false
+    });
   },
-  useNullAsDefault: true
-});
 
+  async close () {
+    await getConnection().close();
+  }
+};
 export default connection;

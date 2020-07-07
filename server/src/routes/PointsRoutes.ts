@@ -18,7 +18,10 @@ routes.post(
   PointController.create
 );
 
-routes.put('/points', PointController.edit);
+routes.put('/points',
+  upload.single('image'),
+  PointController.editValidations(),
+  PointController.edit);
 routes.delete('/points/:id', PointController.delete);
 
 export const PointsRoutes = routes;

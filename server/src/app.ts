@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import express from 'express';
 import path from 'path';
 import cors from 'cors';
@@ -6,7 +7,6 @@ import { errors } from 'celebrate';
 import packageJson from '../package.json';
 
 import { ItemsRoutes, PointsRoutes } from './routes';
-
 const app = express();
 app.use(cors());
 app.use(express.json());

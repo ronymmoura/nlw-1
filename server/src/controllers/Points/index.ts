@@ -1,6 +1,9 @@
-import knex from '@database/connection';
 import { Request, Response } from 'express';
 import { celebrate, Joi } from 'celebrate';
+import { Point } from '@entities/Point';
+import { PointsRepository } from '@src/repositories/PointsRepository';
+import { ItemsRepository } from '@src/repositories';
+import { Item } from '@entities/Item';
 
 export class PointController {
   static async list (req: Request, res: Response) {
@@ -10,13 +13,7 @@ export class PointController {
       .split(',')
       .map((item) => Number(item.trim()));
 
-    const points = await knex('points')
-      .join('pointItems', { 'points.id': 'pointItems.pointId' })
-      .whereIn('pointItems.itemId', parsedItems)
-      .where('city', String(city))
-      .where('uf', String(uf))
-      .distinct()
-      .select('points.*');
+    const points = await new PointsRepository().list();
 
     const serializedPoints = points.map((point) => {
       return {
@@ -30,36 +27,142 @@ export class PointController {
 
   static async get (req: Request, res) {
     const id = Number(req.params.id);
-    const point = await knex('points').where({ id }).first();
+    const point = await new PointsRepository().get(id);
 
-    if (!point) return res.status(400).json({ message: 'Point not found.' });
+    if (!point) return res.status(404).json({ message: 'Point not found.' });
 
     const serializedPoint = {
       ...point,
       image_url: `http://192.168.0.2:3333/uploads/${point.image}`
     };
 
-    const items = await knex('points')
-      .join('pointItems', { 'points.id': 'pointItems.pointId' })
-      .join('items', { 'items.id': 'pointItems.itemId' })
-      .where('points.id', id)
-      .select('items.*');
+    res.json(serializedPoint);
+  }
 
-    res.json({ point: serializedPoint, items });
+  static async create (req: Request, res: Response) {
+    try {
+      const { body } = req;
+      const itemsIds = body.items.trim();
+      delete body.items;
+
+      var splitedItems = String(itemsIds).split(',');
+      var filteredItems = [];
+
+      for (const item of splitedItems) {
+        const value = Number(item.trim());
+        if (!Number.isNaN(value) && item.trim() !== '')
+          filteredItems.push(value);
+      }
+
+      if (filteredItems.length === 0)
+        throw new Error('É necessário cadastrar ao menos um item válido');
+
+      const itemsRepository = new ItemsRepository();
+      var items: Item[] = [];
+
+      for (const itemId of filteredItems) {
+        const item = await itemsRepository.get(itemId);
+        items.push(item);
+      }
+
+      var point: Point = {
+        ...body,
+        image: `${req.file.filename}`,
+        items
+      };
+
+      const result = await new PointsRepository().insert(point);
+
+      const insertedId = result.id;
+      res.json(insertedId);
+    } catch (err) {
+      res.status(500).json(err.message);
+    }
+  }
+
+  static async edit (req: Request, res: Response) {
+    const { body } = req;
+    const itemsIds = body.items;
+    delete body.items;
+
+    const parsedItems = String(itemsIds)
+      .split(',')
+      .map((item) => Number(item.trim()));
+
+    const itemsRepository = new ItemsRepository();
+    var items: Item[] = [];
+
+    for (const itemId of parsedItems) {
+      const item = await itemsRepository.get(itemId);
+      items.push(item);
+    }
+
+    var point: Point = {
+      ...body,
+      image: `${req.file.filename}`,
+      items
+    };
+
+    await new PointsRepository().update(point);
+
+    res.sendStatus(200);
+  }
+
+  static async delete (req: Request, res: Response) {
+    const id = Number(req.params.id);
+    await new PointsRepository().delete(id);
+
+    res.sendStatus(200);
   }
 
   static createValidations () {
     return celebrate(
       {
         body: Joi.object().keys({
-          name: Joi.string().required(),
-          email: Joi.string().required().email(),
-          whatsapp: Joi.string().required(),
-          latitude: Joi.number().required(),
-          longitude: Joi.number().required(),
-          city: Joi.string().required(),
-          uf: Joi.string().required().max(2),
-          items: Joi.string().required()
+          name: Joi.string()
+            .required()
+            .messages({
+              'string.required': 'Name is required'
+            }),
+          email: Joi.string()
+            .required()
+            .email()
+            .messages({
+              'string.required': 'E-mail is required',
+              'string.email': 'E-mail is invalid'
+            }),
+          whatsapp: Joi.string()
+            .required()
+            .messages({
+              'string.required': 'Whatsapp is required'
+            }),
+          latitude: Joi.number()
+            .required()
+            .messages({
+              'string.required': 'Latitude is required'
+            }),
+          longitude: Joi.number()
+            .required()
+            .messages({
+              'string.required': 'Longitude is required'
+            }),
+          city: Joi.string()
+            .required()
+            .messages({
+              'string.required': 'City is required'
+            }),
+          uf: Joi.string()
+            .required()
+            .max(2)
+            .messages({
+              'string.required': 'UF is required',
+              'string.max': 'UF length must be 2 characters'
+            }),
+          items: Joi.string()
+            .required()
+            .messages({
+              'string.required': 'Items is required'
+            })
         })
       },
       {
@@ -68,82 +171,64 @@ export class PointController {
     );
   }
 
-  static async create (req: Request, res: Response) {
-    const trx = await knex.transaction();
-
-    try {
-      const point = req.body;
-      const items = point.items;
-      delete point.items;
-
-      if (!items || items.length === 0)
-        throw new Error('É necessário incluir ao menos um item.');
-
-      point.image = `${req.file.filename}`;
-      const insertedPoints = await trx('points').insert(point);
-      const insertedId = insertedPoints[0];
-
-      const pointItems = items
-        .split(',')
-        .map((item: string) => Number(item.trim()))
-        .map((itemId: number) => {
-          return {
-            pointId: insertedId,
-            itemId
-          };
-        });
-
-      await trx('pointItems').insert(pointItems);
-
-      await trx.commit();
-
-      res.json(insertedId);
-    } catch (err) {
-      await trx.rollback();
-      res.status(500).send(err.message);
-    }
-  }
-
-  static async edit (req: Request, res: Response) {
-    const trx = await knex.transaction();
-    try {
-      const point = req.body;
-      const items = point.items;
-      delete point.items;
-
-      await trx('points').where({ id: point.id }).update(point);
-      await trx('pointItems').where({ pointId: point.id }).del();
-
-      const pointItems = items.map((itemId: any) => {
-        return {
-          pointId: point.id,
-          itemId
-        };
-      });
-
-      await trx('pointItems').insert(pointItems);
-
-      await trx.commit();
-
-      res.sendStatus(200);
-    } catch (err) {
-      await trx.rollback();
-      res.status(500).json(err.message);
-    }
-  }
-
-  static async delete (req: Request, res: Response) {
-    const trx = await knex.transaction();
-    try {
-      const id = Number(req.params.id);
-      await trx('points').where({ id }).del();
-      await trx('pointItems').where({ pointId: id }).del();
-
-      await trx.commit();
-      res.sendStatus(200);
-    } catch (err) {
-      await trx.rollback();
-      res.status(500).json(err.message);
-    }
+  static editValidations () {
+    return celebrate(
+      {
+        body: Joi.object().keys({
+          id: Joi.number()
+            .required()
+            .messages({
+              'string.required': 'ID is required'
+            }),
+          name: Joi.string()
+            .required()
+            .messages({
+              'string.required': 'Name is required'
+            }),
+          email: Joi.string()
+            .required()
+            .email()
+            .messages({
+              'string.required': 'E-mail is required',
+              'string.email': 'E-mail is invalid'
+            }),
+          whatsapp: Joi.string()
+            .required()
+            .messages({
+              'string.required': 'Whatsapp is required'
+            }),
+          latitude: Joi.number()
+            .required()
+            .messages({
+              'string.required': 'Latitude is required'
+            }),
+          longitude: Joi.number()
+            .required()
+            .messages({
+              'string.required': 'Longitude is required'
+            }),
+          city: Joi.string()
+            .required()
+            .messages({
+              'string.required': 'City is required'
+            }),
+          uf: Joi.string()
+            .required()
+            .max(2)
+            .messages({
+              'string.required': 'UF is required',
+              'string.max': 'UF length must be 2 characters'
+            }),
+          items: Joi.string()
+            .required()
+            .messages({
+              'string.required': 'Items is required'
+            })
+        })
+      },
+      {
+        abortEarly: false
+      }
+    );
   }
 }

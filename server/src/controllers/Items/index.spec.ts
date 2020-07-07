@@ -1,6 +1,8 @@
 import app from '@src/app';
 import supertest from 'supertest';
 
+import connection from '@database/connection';
+
 const request = supertest(app);
 
 const mockData = {
@@ -11,6 +13,14 @@ const mockData = {
 var mockDataID = 0;
 
 describe('ItemsController', () => {
+  beforeAll(async () => {
+    await connection.create();
+  });
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
   test('it should create a new item', async (done) => {
     const res = await request.post('/items').send(mockData);
 
