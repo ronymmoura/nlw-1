@@ -23,6 +23,9 @@
       "@database/*": [
         "./src/database/*"
       ],
+      "@repositories/*": [
+        "./src/repositories/*"
+      ],
       "@src/*": [
         "./src/*"
       ],

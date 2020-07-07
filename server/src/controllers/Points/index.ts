@@ -1,11 +1,38 @@
-import { Request, Response } from 'express';
+import express, { Request, Response, Router } from 'express';
 import { celebrate, Joi } from 'celebrate';
+import { ItemsRepository } from '@repositories/ItemsRepository';
+import { PointsRepository } from '@repositories/PointsRepository';
 import { Point } from '@entities/Point';
-import { PointsRepository } from '@src/repositories/PointsRepository';
-import { ItemsRepository } from '@src/repositories';
 import { Item } from '@entities/Item';
 
-export class PointController {
+import multer from 'multer';
+import multerConfig from '@config/multer';
+
+const upload = multer(multerConfig);
+
+export class PointsController {
+  static routes (): Router {
+    const router = express.Router();
+
+    router.get('/points', PointsController.list);
+    router.get('/points/:id', PointsController.get);
+
+    router.post(
+      '/points',
+      upload.single('image'),
+      PointsController.createValidations(),
+      PointsController.create
+    );
+
+    router.put('/points',
+      upload.single('image'),
+      PointsController.editValidations(),
+      PointsController.edit);
+    router.delete('/points/:id', PointsController.delete);
+
+    return router;
+  }
+
   static async list (req: Request, res: Response) {
     const { city, uf, items } = req.query;
 

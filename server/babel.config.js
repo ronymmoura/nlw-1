@@ -16,6 +16,7 @@ module.exports = {
           '@entities': './src/entities',
           '@controllers': './src/controllers',
           "@config/*": "./src/config/*",
+          "@repositories/*": "./src/repositories/*",
           "@database/*": "./src/database/*",
           "@src/*": "./src/*",
           "@root/*": "./*"

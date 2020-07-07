@@ -6,14 +6,16 @@ import { errors } from 'celebrate';
 
 import packageJson from '../package.json';
 
-import { ItemsRoutes, PointsRoutes } from './routes';
+import { ItemsController } from '@controllers/Items';
+import { PointsController } from '@controllers/Points';
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(errors());
 
-app.use(ItemsRoutes);
-app.use(PointsRoutes);
+app.use(ItemsController.routes());
+app.use(PointsController.routes());
 
 app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
 
