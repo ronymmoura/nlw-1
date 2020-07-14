@@ -1,10 +1,10 @@
-import express, { Request, Response, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { ItemsRepository } from '@src/repositories';
 import { Item } from '@entities/Item';
 
 export class ItemsController {
   static routes (): Router {
-    const router = express.Router();
+    const router = Router();
 
     router.get('/items', ItemsController.list);
     router.get('/items/:id', ItemsController.get);

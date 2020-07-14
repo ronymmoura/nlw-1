@@ -11,27 +11,13 @@
     "removeComments": true,
     "baseUrl": ".",
     "paths": {
-      "@controllers/*": [
-        "./src/controllers/*"
-      ],
-      "@entities/*": [
-        "./src/entities/*"
-      ],
-      "@config/*": [
-        "./src/config/*"
-      ],
-      "@database/*": [
-        "./src/database/*"
-      ],
-      "@repositories/*": [
-        "./src/repositories/*"
-      ],
-      "@src/*": [
-        "./src/*"
-      ],
-      "@root/*": [
-        "./*"
-      ]
+      "@controllers/*": ["./src/controllers/*"],
+      "@entities/*": ["./src/entities/*"],
+      "@config/*": ["./src/config/*"],
+      "@database/*": ["./src/database/*"],
+      "@repositories/*": ["./src/repositories/*"],
+      "@src/*": ["./src/*"],
+      "@root/*": ["./*"]
     },
     "typeRoots": [
       "./node_modules/@types",

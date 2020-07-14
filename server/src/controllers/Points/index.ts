@@ -1,4 +1,4 @@
-import express, { Request, Response, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { celebrate, Joi } from 'celebrate';
 import { ItemsRepository } from '@repositories/ItemsRepository';
 import { PointsRepository } from '@repositories/PointsRepository';
@@ -12,7 +12,7 @@ const upload = multer(multerConfig);
 
 export class PointsController {
   static routes (): Router {
-    const router = express.Router();
+    const router = Router();
 
     router.get('/points', PointsController.list);
     router.get('/points/:id', PointsController.get);
